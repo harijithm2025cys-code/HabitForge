@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitForge – Personal Habit Streak Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <div>
+                <h1 class="logo">HabitForge</h1>
+                <p class="subtitle">Personal Habit Streak Tracker with Reminders</p>
+            </div>
+            <div class="header-actions">
+                <a href="/swagger-ui.html" target="_blank" class="btn btn-secondary btn-swagger">📖 Swagger UI</a>
+                <button id="addHabitBtn" class="btn btn-primary" onclick="openAddHabitModal()">+ Add Habit</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-content">
+
+        <!-- Error / Success Alert Box -->
+        <div id="alertBox" class="alert hidden">
+            <span id="alertMessage"></span>
+            <button class="alert-close" onclick="dismissAlert()">&times;</button>
+        </div>
+
+        <!-- Today's Reminders Section -->
+        <div id="reminderSection" class="reminder-box hidden">
+            <div class="reminder-header">
+                <span class="reminder-icon">🔔</span>
+                <strong>Today's Reminders</strong>
+            </div>
+            <ul id="reminderList" class="reminder-list"></ul>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Habits</div>
+                <div class="stat-value" id="statTotalHabits">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Today's Completed</div>
+                <div class="stat-value text-success" id="statTodayCompleted">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Habits Requiring Attention</div>
+                <div class="stat-value text-warning" id="statRequiringAttention">0</div>
+            </div>
+        </section>
+
+        <!-- Habit Cards Grid -->
+        <section class="habits-section">
+            <div class="section-title-row">
+                <h2>Your Habits</h2>
+            </div>
+            <div id="habitsList" class="habits-grid">
+                <div class="loading-text">Loading habits...</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Add / Edit Habit -->
+    <div id="habitModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add Habit</h3>
+                <button class="modal-close-btn" onclick="closeHabitModal()">&times;</button>
+            </div>
+            <form id="habitForm" onsubmit="handleHabitFormSubmit(event)">
+                <input type="hidden" id="habitId">
+
+                <div class="form-group">
+                    <label for="habitName">Habit Name <span class="required">*</span></label>
+                    <input type="text" id="habitName" required placeholder="e.g., Morning Jogging, Read 15 mins">
+                </div>
+
+                <div class="form-group">
+                    <label for="habitDescription">Description</label>
+                    <textarea id="habitDescription" rows="2" placeholder="e.g., Run 3km around the park"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="habitFrequency">Frequency <span class="required">*</span></label>
+                    <select id="habitFrequency" onchange="toggleWeekdaySelection()">
+                        <option value="DAILY">Daily</option>
+                        <option value="SPECIFIC_DAYS">Specific Days</option>
+                    </select>
+                </div>
+
+                <!-- Weekday Selection (shown only for Specific Days) -->
+                <div id="weekdayGroup" class="form-group hidden">
+                    <label>Select Required Days <span class="required">*</span></label>
+                    <div class="weekday-checkboxes">
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="1"> Mon</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="2"> Tue</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="3"> Wed</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="4"> Thu</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="5"> Fri</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="6"> Sat</label>
+                        <label class="weekday-item"><input type="checkbox" name="targetDay" value="7"> Sun</label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeHabitModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveHabitBtn">Save Habit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Monthly Calendar View -->
+    <div id="calendarModal" class="modal-overlay hidden">
+        <div class="modal-card calendar-card">
+            <div class="modal-header">
+                <div>
+                    <h3 id="calendarHabitName">Habit Calendar</h3>
+                    <div class="calendar-streaks">
+                        <span>Current Streak: <strong id="calCurrentStreak">0</strong> days</span>
+                        <span class="streak-separator">•</span>
+                        <span>Best Streak: <strong id="calBestStreak">0</strong> days</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" onclick="closeCalendarModal()">&times;</button>
+            </div>
+
+            <!-- Calendar Navigation -->
+            <div class="calendar-nav">
+                <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">&larr; Previous Month</button>
+                <span class="calendar-month-title" id="calendarMonthTitle">September 2026</span>
+                <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">Next Month &rarr;</button>
+            </div>
+
+            <!-- Calendar Legend -->
+            <div class="calendar-legend">
+                <span class="legend-item"><span class="legend-color legend-completed"></span> Completed</span>
+                <span class="legend-item"><span class="legend-color legend-missed"></span> Missed</span>
+                <span class="legend-item"><span class="legend-color legend-rest"></span> Rest Day</span>
+            </div>
+
+            <!-- Days of Week Header -->
+            <div class="calendar-weekdays">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div id="calendarGrid" class="calendar-grid">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCalendarModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
